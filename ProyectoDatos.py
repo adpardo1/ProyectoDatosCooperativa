@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-
-
-
+import plotly.express as px
 # Leer el dataset
 df = pd.read_csv(r"C:\Users\0zzda\Downloads\datos_financieros1.csv")
 
