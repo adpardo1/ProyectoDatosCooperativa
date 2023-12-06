@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 # Leer el dataset
-df = pd.read_csv(r"datos_financieros1.csv")
+data = pd.read_csv(r"datos_financieros1.csv")
 
 df = pd.DataFrame(data)
 # Obtener los años disponibles en el dataset
