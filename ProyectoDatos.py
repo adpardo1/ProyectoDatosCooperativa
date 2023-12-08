@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
 # Leer el dataset
-data = pd.read_csv('datos_financieros1.csv')
-df = pd.DataFrame(data)
+df = pd.read_csv('datos_financieros1.csv')
+df2 = pd.read_csv('dataset_generado.csv')
+
 # Obtener los años disponibles en el dataset
 anios_disponibles = df['Año'].unique()
 
@@ -87,7 +91,56 @@ selected_functionality = st.sidebar.selectbox("Selecciona una categoria", [
 # Mostrar la funcionalidad seleccionada
 if selected_functionality == "Rentabilidad":
     st.subheader("Fórmulas de Rentabilidad")
+    # Filtrar el DataFrame df2 por el año seleccionado
+    df2_filtered = df2[df2['anio'] == selected_year]
     
+    # Calcular ROA
+    df2_filtered['ROA'] = df2_filtered['Ingresos Totales'] / ((df2_filtered['Activos Inicio Ano'] + df2_filtered['Activos Fin Ano']) / 2)
+    
+    # Preparar datos para el gráfico
+    melted_df = pd.melt(df2_filtered, id_vars=['periodo', 'Tipo'], value_vars=['Ingresos Totales', 'Gastos Totales', 'ROA'])
+
+    # Crear un gráfico de barras agrupadas por periodo y tipo de transacción
+    fig, ax = plt.subplots(figsize=(12, 8))
+    sns.barplot(x='periodo', y='value', hue='Tipo', data=melted_df, ci=None, palette="viridis", ax=ax)
+
+    # Agregar una línea para el ROA
+    sns.lineplot(x='periodo', y='ROA', data=df2_filtered, label='ROA', color='black', marker='o', ax=ax)
+
+    # Configurar el gráfico
+    plt.title(f'Rentabilidad en {selected_year}')
+    plt.xlabel('Periodo')
+    plt.ylabel('Monto')
+    plt.legend(title='Tipo de Transacción')
+
+    # Mostrar gráfico
+    st.pyplot(fig)
+   # Filtrar el DataFrame df2 por el año seleccionado
+    df2_filtered = df2[df2['anio'] == selected_year]
+    
+    # Ajustar el cálculo de ROA para evitar divisiones por 0
+    df2_filtered['ROA'] = df2_filtered['Ingresos Totales'] / np.maximum(1, ((df2_filtered['Activos Inicio Ano'] + df2_filtered['Activos Fin Ano']) / 2))
+
+    # Crear un gráfico de barras apiladas con etiquetas
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    bar_width = 0.8
+    index = range(len(df2_filtered['periodo']))
+
+    # Barras apiladas para Ingresos Totales y Gastos Totales
+    plt.bar(index, df2_filtered['Ingresos Totales'], bar_width, label='Ingresos Totales', color='green')
+    plt.bar(index, df2_filtered['Gastos Totales'], bar_width, label='Gastos Totales', color='red', bottom=df2_filtered['Ingresos Totales'])
+
+    # Línea adicional para el ROA
+    ax.plot(index, df2_filtered['ROA'], marker='o', color='blue', label='ROA')
+
+    plt.xlabel('Periodo')
+    plt.ylabel('Monto')
+    plt.title(f'Rentabilidad en {selected_year}')
+    plt.legend()
+
+    # Mostrar gráfico
+    st.pyplot(fig)
     mostrar_indicador_financiero(
         "Rentabilidad sobre el activo (ROA)",
         "ROA = Utilidad Neta / Activos Totales Promedio",
