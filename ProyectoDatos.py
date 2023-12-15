@@ -138,7 +138,41 @@ if selected_functionality == "Rentabilidad":
     plt.ylabel('Monto')
     plt.title(f'Rentabilidad en {selected_year}')
     plt.legend()
+    #---------------------------------------------------------
+    df2["ROA"] = df2["Ingresos Totales"] / ((df2["Activos Inicio Ano"] + df2["Activos Fin Ano"]) / 2)
+    fig = px.scatter(
+        df2,
+        x="periodo",  
+        y="ROA",
+        color="Tipo",
+        size="ROA",  
+        animation_frame="anio",
+        range_y=[0, df2["ROA"].max() + 0.1],  
+        labels={"ROA": "ROA", "periodo": "Periodo", "anio": "Año"},
+        title="ROA por tipo a lo largo de los periodos",
+    )
+    st.plotly_chart(fig)
+    
+    #-------------------------------------------------------
+    df2['ROA'] = df2['Ingresos Totales'] / ((df2['Activos Inicio Ano'] + df2['Activos Fin Ano']) / 2)
 
+    # Convertir 'anio' y 'periodo' a un formato de fecha
+    df2['Fecha'] = pd.to_datetime(df2['anio'].astype(str) + '-' + df2['periodo'], format='%Y-Q%m')
+
+    # Menú de selección de años
+    anios_seleccionados = st.slider("Selecciona un rango de años", min_value=df2["anio"].min(), max_value=df2["anio"].max(), value=(df2["anio"].min(), df2["anio"].max()))
+
+    # Filtrar el DataFrame por el rango de años seleccionado
+    df2_filtrado = df2[(df2["anio"] >= anios_seleccionados[0]) & (df2["anio"] <= anios_seleccionados[1])]
+
+    # Crear un gráfico interactivo de puntos con selección de componentes y rango de tiempo
+    fig_roa_tipo = px.scatter(df2_filtrado, x='Fecha', y='ROA', color='Tipo', labels={'ROA': 'ROA por Tipo'})
+    fig_roa_tipo.update_layout(title=f'ROA por Tipo en el Rango de Años Seleccionado')
+
+    # Mostrar la barra de rango de años debajo de la gráfica
+    st.plotly_chart(fig_roa_tipo)
+
+    #--------------------------------------------------------------
     # Mostrar gráfico
     st.pyplot(fig)
     mostrar_indicador_financiero(
