@@ -138,20 +138,8 @@ if selected_functionality == "Rentabilidad":
     plt.ylabel('Monto')
     plt.title(f'Rentabilidad en {selected_year}')
     plt.legend()
-    #---------------------------------------------------------
-    df2["ROA"] = df2["Ingresos Totales"] / ((df2["Activos Inicio Ano"] + df2["Activos Fin Ano"]) / 2)
-    fig = px.scatter(
-        df2,
-        x="periodo",  
-        y="ROA",
-        color="Tipo",
-        size="ROA",  
-        animation_frame="anio",
-        range_y=[0, df2["ROA"].max() + 0.1],  
-        labels={"ROA": "ROA", "periodo": "Periodo", "anio": "Año"},
-        title="ROA por tipo a lo largo de los periodos",
-    )
-    st.plotly_chart(fig)
+    # Mostrar gráfico
+    st.pyplot(fig)
     
     #-------------------------------------------------------
     df2['ROA'] = df2['Ingresos Totales'] / ((df2['Activos Inicio Ano'] + df2['Activos Fin Ano']) / 2)
@@ -165,31 +153,14 @@ if selected_functionality == "Rentabilidad":
     # Filtrar el DataFrame por el rango de años seleccionado
     df2_filtrado = df2[(df2["anio"] >= anios_seleccionados[0]) & (df2["anio"] <= anios_seleccionados[1])]
 
-    # Menú de selección de tipos
-    tipos_seleccionados = st.multiselect("Selecciona los tipos a mostrar", df2_filtrado['Tipo'].unique(), default=df2_filtrado['Tipo'].unique())
-
-    # Filtrar el DataFrame por tipos seleccionados
-    df2_filtrado_tipos = df2_filtrado[df2_filtrado['Tipo'].isin(tipos_seleccionados)]
-
     # Agrupar por Tipo y Fecha, calculando el promedio del ROA
-    df2_agrupado = df2_filtrado_tipos.groupby(['Tipo', 'Fecha']).agg({'ROA': 'mean'}).reset_index()
+    df2_agrupado = df2_filtrado.groupby(['Tipo', 'Fecha']).agg({'ROA': 'mean'}).reset_index()
 
-    # Crear un gráfico interactivo de líneas con selección de componentes y rango de tiempo
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    for tipo in tipos_seleccionados:
-        df_tipo = df2_agrupado[df2_agrupado['Tipo'] == tipo]
-        ax.plot(df_tipo['Fecha'], df_tipo['ROA'], marker='o', label=tipo)
-
-    # Configurar la leyenda y etiquetas
-    ax.legend()
-    ax.set_xlabel('Periodo')
-    ax.set_ylabel('ROA')
-    ax.set_title(f'ROA por Tipo en el Rango de Años Seleccionado')
+    # Crear un gráfico interactivo de puntos con rango de tiempo
+    fig = px.scatter(df2_agrupado, x='Fecha', y='ROA', color='Tipo', labels={'ROA': 'ROA'}, title='ROA por Tipo en el Rango de Años Seleccionado')
 
     # Mostrar la barra de rango de años debajo de la gráfica
-    st.pyplot(fig)
-
+    st.plotly_chart(fig)
 
     #--------------------------------------------------------------
     
