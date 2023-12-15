@@ -173,8 +173,7 @@ if selected_functionality == "Rentabilidad":
     st.plotly_chart(fig_roa_tipo)
 
     #--------------------------------------------------------------
-    # Mostrar gráfico
-    st.pyplot(fig)
+    
     mostrar_indicador_financiero(
         "Rentabilidad sobre el activo (ROA)",
         "ROA = Utilidad Neta / Activos Totales Promedio",
