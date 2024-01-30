@@ -5,6 +5,7 @@ import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from plotly.subplots import make_subplots
 # Leer el dataset
 df = pd.read_csv('datos_financieros1.csv')
 df2 = pd.read_csv('dataset_generado.csv')
