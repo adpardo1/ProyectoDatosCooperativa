@@ -8,6 +8,7 @@ import numpy as np
 # Leer el dataset
 df = pd.read_csv('datos_financieros1.csv')
 df2 = pd.read_csv('dataset_generado.csv')
+dfROA = pd.read_csv("formulascsvFINAL1.csv")
 
 # Obtener los años disponibles en el dataset
 anios_disponibles = df['Año'].unique()
@@ -79,6 +80,89 @@ def mostrar_indicador_financiero(titulo, formula, descripcion, resultado, x, y, 
 
     st.subheader(f"Gráfica interactiva de {titulo}")
     st.plotly_chart(fig)
+# Calcular ROA por trimestre
+dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
+dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
+dfROA['AÑO'] = dfROA['FECHA'].dt.year
+dfROA['ROA'] = dfROA.groupby('AÑO')['SALDO'].pct_change(4) * 100
+
+# Crear un gráfico interactivo con una línea por cada año
+fig_roa = make_subplots(rows=1, cols=1, shared_xaxes=True)
+
+# Filtrar solo los datos que tienen ROA (descartando NaN)
+df_filtered_roa = dfROA.dropna(subset=['ROA'])
+
+for year in df_filtered_roa['AÑO'].unique():
+    data_year = df_filtered_roa[df_filtered_roa['AÑO'] == year]
+    fig_roa.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['ROA'], mode='lines+markers', name=f'ROA - {year}'))
+
+# Actualizar diseño del gráfico
+fig_roa.update_layout(title='ROA por Trimestre',
+                      xaxis_title='Fecha',
+                      yaxis_title='ROA')
+
+# Mostrar el gráfico
+st.subheader("Gráfico de ROA por Trimestre")
+st.plotly_chart(fig_roa)
+# Convertir la columna 'SALDO' a tipo numérico
+dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
+
+# Convertir la columna 'FECHA' a tipo datetime
+dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
+
+# Crear una nueva columna para el año
+dfROA['AÑO'] = dfROA['FECHA'].dt.year
+
+# Calcular Gasto Operativo por trimestre
+dfROA['GASTO_OPERATIVO'] = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION'].groupby('AÑO')['SALDO'].pct_change(4) * 100
+
+# Crear un gráfico interactivo con una línea por cada año para Gasto Operativo
+fig_gasto_operativo = make_subplots(rows=1, cols=1, shared_xaxes=True)
+
+# Filtrar solo los datos que tienen Gasto Operativo (descartando NaN)
+df_filtered_gasto_operativo = dfROA.dropna(subset=['GASTO_OPERATIVO'])
+
+for year in df_filtered_gasto_operativo['AÑO'].unique():
+    data_year = df_filtered_gasto_operativo[df_filtered_gasto_operativo['AÑO'] == year]
+    fig_gasto_operativo.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['GASTO_OPERATIVO'], mode='lines+markers', name=f'Gasto Operativo - {year}'))
+
+# Actualizar diseño del gráfico Gasto Operativo
+fig_gasto_operativo.update_layout(title='Gasto Operativo por Trimestre',
+                                 xaxis_title='Fecha',
+                                 yaxis_title='Gasto Operativo')
+
+# Mostrar el gráfico Gasto Operativo
+st.subheader("Gráfico de Gasto Operativo por Trimestre")
+st.plotly_chart(fig_gasto_operativo)
+
+# Convertir la columna 'SALDO' a tipo numérico
+dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
+
+# Convertir la columna 'FECHA' a tipo datetime
+dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
+
+# Crear una nueva columna para el año
+dfROA['AÑO'] = dfROA['FECHA'].dt.year
+
+# Calcular Solvencia Patrimonial
+df_solvencia = dfROA.pivot(index='FECHA', columns='NombreCuenta', values='SALDO').reset_index()
+df_solvencia['SOLVENCIA_PATRIMONIAL'] = df_solvencia['PATRIMONIO'] / df_solvencia['ACTIVO'] * 100
+
+# Crear un gráfico interactivo
+fig_solvencia = make_subplots(rows=1, cols=1, shared_xaxes=True)
+
+# Añadir la línea de Solvencia Patrimonial al gráfico
+fig_solvencia.add_trace(go.Scatter(x=df_solvencia['FECHA'], y=df_solvencia['SOLVENCIA_PATRIMONIAL'], mode='lines+markers', name='Solvencia Patrimonial'))
+
+# Actualizar diseño del gráfico
+fig_solvencia.update_layout(title='Solvencia Patrimonial',
+                            xaxis_title='Fecha',
+                            yaxis_title='Solvencia Patrimonial (%)')
+
+# Mostrar el gráfico
+st.subheader("Gráfico de Solvencia Patrimonial")
+st.plotly_chart(fig_solvencia)
+
 # Menú de selección de funcionalidad
 selected_functionality = st.sidebar.selectbox("Selecciona una categoria", [
     "Rentabilidad",
