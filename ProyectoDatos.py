@@ -2,26 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
 from plotly.subplots import make_subplots
-# Leer el dataset
-df = pd.read_csv('datos_financieros1.csv')
-df2 = pd.read_csv('dataset_generado.csv')
-dfROA = pd.read_csv("formulascsvFINAL1.csv")
 
-# Obtener los años disponibles en el dataset
-anios_disponibles = df['Año'].unique()
-
-# Menú de selección de año
-selected_year = st.sidebar.selectbox("Selecciona un año", anios_disponibles)
-
-# Filtrar el DataFrame por el año seleccionado
-df_filtered = df[df['Año'] == selected_year]
-
-# Función para mostrar cada indicador financiero
-def mostrar_indicador_financiero(titulo, formula, descripcion, resultado, x, y, customdata, color=None, tipo_grafico='lines+markers'):
+def mostrar_indicador_financiero(titulo, formula, descripcion):
     st.header(titulo)
 
     col1, col2, col3 = st.columns(3)
@@ -32,365 +15,168 @@ def mostrar_indicador_financiero(titulo, formula, descripcion, resultado, x, y, 
     col2.subheader("Descripción:")
     col2.write(descripcion)
 
-    col3.subheader("Resultado:")
-    col3.write(resultado)
 
-    if tipo_grafico == 'lines+markers':
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=x,
-            y=y,
-            hovertemplate=customdata,
-            customdata=customdata,
-            mode=tipo_grafico,
-            line=dict(color=color),
-        ))
-    elif tipo_grafico == 'bar':
-        fig = px.bar(x=x, y=y, hover_data={'customdata': customdata}, labels={'y': titulo})
-    elif tipo_grafico == 'bar_with_error':
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=x,
-            y=y,
-            hovertemplate=customdata,
-            customdata=customdata,
-            marker_color=color,
-            error_y=dict(
-                type='data',
-                array=[0.1] * len(y),  # Puedes ajustar el valor del error según tus necesidades
-                visible=True
-            )
-        ))
-    elif tipo_grafico == 'dotplot':
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=x,
-            y=y,
-            hovertemplate=customdata,
-            customdata=customdata,
-            mode='markers',
-            marker=dict(color=color, size=10),
-        ))
+dfROA = pd.read_csv("formulascsvFINAL1.csv")
 
-    if fig:  # Asegurarse de que fig no sea None antes de intentar actualizar el diseño
-        fig.update_layout(
-            yaxis=dict(title=titulo),
-            title=titulo,
-            xaxis=dict(title='Periodo'),
-        )
+# Crear un DataFrame con todos los datos
+st.title("Análisis de Datos Financieros")
 
-    st.subheader(f"Gráfica interactiva de {titulo}")
-    st.plotly_chart(fig)
-# Calcular ROA por trimestre
-dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
-dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
-dfROA['AÑO'] = dfROA['FECHA'].dt.year
-dfROA['ROA'] = dfROA.groupby('AÑO')['SALDO'].pct_change(4) * 100
-
-# Crear un gráfico interactivo con una línea por cada año
-fig_roa = make_subplots(rows=1, cols=1, shared_xaxes=True)
-
-# Filtrar solo los datos que tienen ROA (descartando NaN)
-df_filtered_roa = dfROA.dropna(subset=['ROA'])
-
-for year in df_filtered_roa['AÑO'].unique():
-    data_year = df_filtered_roa[df_filtered_roa['AÑO'] == year]
-    fig_roa.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['ROA'], mode='lines+markers', name=f'ROA - {year}'))
-
-# Actualizar diseño del gráfico
-fig_roa.update_layout(title='ROA por Trimestre',
-                      xaxis_title='Fecha',
-                      yaxis_title='ROA')
-
-# Mostrar el gráfico
-st.subheader("Gráfico de ROA por Trimestre")
-st.plotly_chart(fig_roa)
-# Convertir la columna 'SALDO' a tipo numérico
-dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
-
-# Convertir la columna 'FECHA' a tipo datetime
-dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
-
-# Crear una nueva columna para el año
-dfROA['AÑO'] = dfROA['FECHA'].dt.year
-
-# Calcular Gasto Operativo por trimestre
-dfROA['GASTO_OPERATIVO'] = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION'].groupby('AÑO')['SALDO'].pct_change(4) * 100
-
-# Crear un gráfico interactivo con una línea por cada año para Gasto Operativo
-fig_gasto_operativo = make_subplots(rows=1, cols=1, shared_xaxes=True)
-
-# Filtrar solo los datos que tienen Gasto Operativo (descartando NaN)
-df_filtered_gasto_operativo = dfROA.dropna(subset=['GASTO_OPERATIVO'])
-
-for year in df_filtered_gasto_operativo['AÑO'].unique():
-    data_year = df_filtered_gasto_operativo[df_filtered_gasto_operativo['AÑO'] == year]
-    fig_gasto_operativo.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['GASTO_OPERATIVO'], mode='lines+markers', name=f'Gasto Operativo - {year}'))
-
-# Actualizar diseño del gráfico Gasto Operativo
-fig_gasto_operativo.update_layout(title='Gasto Operativo por Trimestre',
-                                 xaxis_title='Fecha',
-                                 yaxis_title='Gasto Operativo')
-
-# Mostrar el gráfico Gasto Operativo
-st.subheader("Gráfico de Gasto Operativo por Trimestre")
-st.plotly_chart(fig_gasto_operativo)
-
-# Convertir la columna 'SALDO' a tipo numérico
-dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
-
-# Convertir la columna 'FECHA' a tipo datetime
-dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
-
-# Crear una nueva columna para el año
-dfROA['AÑO'] = dfROA['FECHA'].dt.year
-
-# Calcular Solvencia Patrimonial
-df_solvencia = dfROA.pivot(index='FECHA', columns='NombreCuenta', values='SALDO').reset_index()
-df_solvencia['SOLVENCIA_PATRIMONIAL'] = df_solvencia['PATRIMONIO'] / df_solvencia['ACTIVO'] * 100
-
-# Crear un gráfico interactivo
-fig_solvencia = make_subplots(rows=1, cols=1, shared_xaxes=True)
-
-# Añadir la línea de Solvencia Patrimonial al gráfico
-fig_solvencia.add_trace(go.Scatter(x=df_solvencia['FECHA'], y=df_solvencia['SOLVENCIA_PATRIMONIAL'], mode='lines+markers', name='Solvencia Patrimonial'))
-
-# Actualizar diseño del gráfico
-fig_solvencia.update_layout(title='Solvencia Patrimonial',
-                            xaxis_title='Fecha',
-                            yaxis_title='Solvencia Patrimonial (%)')
-
-# Mostrar el gráfico
-st.subheader("Gráfico de Solvencia Patrimonial")
-st.plotly_chart(fig_solvencia)
-
-# Menú de selección de funcionalidad
-selected_functionality = st.sidebar.selectbox("Selecciona una categoria", [
-    "Rentabilidad",
-    "Eficiencia Operativa",
-    "Gasto",
-    "Calidad de Cartera",
-    "Otros Indicadores",  # Agregado para nuevas fórmulas
+# Menú de selección entre las fórmulas
+selected_formula = st.sidebar.selectbox("Selecciona una fórmula", [
+    "ROA por Trimestre",
+    "Gasto Operativo por Trimestre",
+    "Solvencia Patrimonial"
 ])
 
-# Mostrar la funcionalidad seleccionada
-if selected_functionality == "Rentabilidad":
-    st.subheader("Fórmulas de Rentabilidad")
-    # Filtrar el DataFrame df2 por el año seleccionado
-    df2_filtered = df2[df2['anio'] == selected_year]
-    
-    # Calcular ROA
-    df2_filtered['ROA'] = df2_filtered['Ingresos Totales'] / ((df2_filtered['Activos Inicio Ano'] + df2_filtered['Activos Fin Ano']) / 2)
-    
-    # Preparar datos para el gráfico
-    melted_df = pd.melt(df2_filtered, id_vars=['periodo', 'Tipo'], value_vars=['Ingresos Totales', 'Gastos Totales', 'ROA'])
-
-    # Crear un gráfico de barras agrupadas por periodo y tipo de transacción
-    fig, ax = plt.subplots(figsize=(12, 8))
-    sns.barplot(x='periodo', y='value', hue='Tipo', data=melted_df, ci=None, palette="viridis", ax=ax)
-
-    # Agregar una línea para el ROA
-    sns.lineplot(x='periodo', y='ROA', data=df2_filtered, label='ROA', color='black', marker='o', ax=ax)
-
-    # Configurar el gráfico
-    plt.title(f'Rentabilidad en {selected_year}')
-    plt.xlabel('Periodo')
-    plt.ylabel('Monto')
-    plt.legend(title='Tipo de Transacción')
-
-    # Mostrar gráfico
-    st.pyplot(fig)
-   # Filtrar el DataFrame df2 por el año seleccionado
-    df2_filtered = df2[df2['anio'] == selected_year]
-    
-    # Ajustar el cálculo de ROA para evitar divisiones por 0
-    df2_filtered['ROA'] = df2_filtered['Ingresos Totales'] / np.maximum(1, ((df2_filtered['Activos Inicio Ano'] + df2_filtered['Activos Fin Ano']) / 2))
-
-    # Crear un gráfico de barras apiladas con etiquetas
-    fig, ax = plt.subplots(figsize=(12, 8))
-
-    bar_width = 0.8
-    index = range(len(df2_filtered['periodo']))
-
-    # Barras apiladas para Ingresos Totales y Gastos Totales
-    plt.bar(index, df2_filtered['Ingresos Totales'], bar_width, label='Ingresos Totales', color='green')
-    plt.bar(index, df2_filtered['Gastos Totales'], bar_width, label='Gastos Totales', color='red', bottom=df2_filtered['Ingresos Totales'])
-
-    # Línea adicional para el ROA
-    ax.plot(index, df2_filtered['ROA'], marker='o', color='blue', label='ROA')
-
-    plt.xlabel('Periodo')
-    plt.ylabel('Monto')
-    plt.title(f'Rentabilidad en {selected_year}')
-    plt.legend()
-    # Mostrar gráfico
-    st.pyplot(fig)
-    
-    #-------------------------------------------------------
-    df2['ROA'] = df2['Ingresos Totales'] / ((df2['Activos Inicio Ano'] + df2['Activos Fin Ano']) / 2)
-
-    # Convertir 'anio' y 'periodo' a un formato de fecha
-    df2['Fecha'] = pd.to_datetime(df2['anio'].astype(str) + '-' + df2['periodo'], format='%Y-Q%m')
-
-    # Menú de selección de años
-    anios_seleccionados = st.slider("Selecciona un rango de años", min_value=df2["anio"].min(), max_value=df2["anio"].max(), value=(df2["anio"].min(), df2["anio"].max()))
-
-    # Filtrar el DataFrame por el rango de años seleccionado
-    df2_filtrado = df2[(df2["anio"] >= anios_seleccionados[0]) & (df2["anio"] <= anios_seleccionados[1])]
-
-    # Agrupar por Tipo y Fecha, calculando el promedio del ROA
-    df2_agrupado = df2_filtrado.groupby(['Tipo', 'Fecha']).agg({'ROA': 'mean'}).reset_index()
-
-    # Crear un gráfico interactivo de puntos con rango de tiempo
-    fig = px.scatter(df2_agrupado, x='Fecha', y='ROA', color='Tipo', labels={'ROA': 'ROA'}, title='ROA por Tipo en el Rango de Años Seleccionado')
-
-    # Mostrar la barra de rango de años debajo de la gráfica
-    st.plotly_chart(fig)
-
-    #--------------------------------------------------------------
-    
+# Mostrar la fórmula seleccionada
+if selected_formula == "ROA por Trimestre":
     mostrar_indicador_financiero(
         "Rentabilidad sobre el activo (ROA)",
         "ROA = Utilidad Neta / Activos Totales Promedio",
-        "Esta fórmula mide la eficiencia con la que una empresa utiliza sus activos para generar ganancias.",
-        f"ROA: {df_filtered['Utilidad Neta'].iloc[-1] / df_filtered['Activos Promedio'].iloc[-1]:.2%}",
-        df_filtered['Periodo'],
-        df_filtered['Utilidad Neta'] / df_filtered['Activos Promedio'],
-        customdata=[[utilidad, activos] for utilidad, activos in zip(df_filtered['Utilidad Neta'], df_filtered['Activos Promedio'])],
-        color='blue'
+        "Esta fórmula mide la eficiencia con la que una empresa utiliza sus activos para generar ganancias."
     )
 
-    # Calcular Eficiencia en Gasto Operativo
-    eficiencia_gasto_operativo = (df_filtered['Ingresos Totales'] - df_filtered['Gasto Operativo']) / df_filtered['Ingresos Totales']
+    # Calcular ROA por trimestre
+    dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
+    dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
+    dfROA['AÑO'] = dfROA['FECHA'].dt.year
+    dfROA['ROA'] = dfROA.groupby('AÑO')['SALDO'].pct_change(4) * 100
 
-    # Mostrar indicador financiero
+    fig_roa = make_subplots(rows=1, cols=1, shared_xaxes=True)
+
+    df_filtered_roa = dfROA.dropna(subset=['ROA'])
+
+    for year in df_filtered_roa['AÑO'].unique():
+        data_year = df_filtered_roa[df_filtered_roa['AÑO'] == year]
+        fig_roa.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['ROA'], mode='lines+markers', name=f'ROA - {year}'))
+
+    fig_roa.update_layout(title='ROA por Trimestre',
+                          xaxis_title='Fecha',
+                          yaxis_title='ROA')
+
+    st.subheader("Gráfico de ROA por Trimestre")
+    st.plotly_chart(fig_roa)
+
+    dfROA['AÑO'] = dfROA['FECHA'].dt.year
+
+    # Calcular ROA por trimestre
+    dfROA['ROA'] = dfROA.groupby('AÑO')['SALDO'].pct_change(4) * 100
+
+    # Filtrar solo los datos que tienen ROA (descartando NaN)
+    df_filtered = dfROA.dropna(subset=['ROA'])
+
+    # Crear gráfico interactivo de dispersión animado para ROA por trimestre y año
+    fig_animated_scatter_roa = px.scatter(df_filtered, x='FECHA', y='ROA', animation_frame='AÑO',
+                                        labels={'ROA': 'ROA (%)', 'FECHA': 'Fecha'},
+                                        title='Variación del ROA por Trimestre y Año',
+                                        range_x=[dfROA['FECHA'].min(), dfROA['FECHA'].max()],
+                                        range_y=[df_filtered['ROA'].min(), df_filtered['ROA'].max()])
+    st.subheader("Gráfico de la evolucion de ROA")
+    st.plotly_chart(fig_animated_scatter_roa)
+
+    ingresos = dfROA[dfROA['TIPO'] == 5].groupby('FECHA')['SALDO'].sum()
+    gastos = dfROA[dfROA['TIPO'] == 4].groupby('FECHA')['SALDO'].sum()
+    roa = (ingresos - gastos) / dfROA[dfROA['TIPO'] == 1].groupby('FECHA')['SALDO'].mean() * 100
+
+    fig = px.line(roa, x=roa.index, y='SALDO', title='ROA a lo largo del tiempo')
+    fig.update_xaxes(title_text='Fecha')
+    fig.update_yaxes(title_text='ROA (%)')
+
+    st.subheader("Gráfico de ROA a lo largo del tiempo")
+    st.plotly_chart(fig)
+
+elif selected_formula == "Gasto Operativo por Trimestre":
     mostrar_indicador_financiero(
         "Eficiencia en Gasto Operativo",
         "Eficiencia en Gasto Operativo = (Ingresos Totales - Gasto Operativo) / Ingresos Totales",
-        "Evalúa qué tan eficientemente una empresa está administrando sus gastos operativos en relación con sus ingresos. Un valor más alto indica mayor eficiencia.",
-        f"Eficiencia en Gasto Operativo: {eficiencia_gasto_operativo.iloc[-1]:.2%}",
-        df_filtered['Periodo'],
-        eficiencia_gasto_operativo,
-        customdata=[[ingresos, gasto] for ingresos, gasto in zip(df_filtered['Ingresos Totales'], df_filtered['Gasto Operativo'])],
-        color='green'  # Puedes personalizar el color si lo deseas
+        "Evalúa qué tan eficientemente una empresa está administrando sus gastos operativos en relación con sus ingresos. Un valor más alto indica mayor eficiencia."
     )
 
-elif selected_functionality == "Eficiencia Operativa":
-    st.subheader("Fórmulas de Eficiencia Operativa")
-    mostrar_indicador_financiero(
-        "Grado de Absorción",
-        "Grado Absorción = Gastos de Operación / Margen Operativo",
-        "Indica qué proporción del margen operativo se consume en gastos operativos. Un valor más bajo sugiere una mejor eficiencia operativa.",
-        f"Grado de Absorción: {df_filtered['Gastos de Operación'].iloc[-1] / df_filtered['Margen Operativo'].iloc[-1]:.2%}",
-        df_filtered['Periodo'],
-        df_filtered['Gastos de Operación'] / df_filtered['Margen Operativo'],
-        customdata=[[gastos, margen] for gastos, margen in zip(df_filtered['Gastos de Operación'], df_filtered['Margen Operativo'])],
-        color='blue',
-        tipo_grafico='bar'
-    )
+    # Convertir la columna 'SALDO' a tipo numérico
+    dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
 
-    
-    mostrar_indicador_financiero(
-        "Eficiencia Operativa",
-        "Eficiencia Operativa = Gasto Operativo / Ingresos Operativos",
-        "Calcula qué porcentaje de los ingresos operativos se utiliza para cubrir los gastos operativos. Un valor más bajo es preferible.",
-        f"Eficiencia Operativa: {df['Gasto Operativo'].iloc[-1] / df['Ingresos Operativos'].iloc[-1]:.2%}",
-        df['Periodo'],
-        df['Gasto Operativo'] / df['Ingresos Operativos'],
-        customdata=[[gasto, ingresos] for gasto, ingresos in zip(df['Gasto Operativo'], df['Ingresos Operativos'])],
-        color='green',
-        tipo_grafico='bar_with_error'
-    )
-    # Continuar con más fórmulas de eficiencia operativa si es necesario
-elif selected_functionality == "Gasto":
-    st.subheader("Fórmulas de Gasto")
+    # Convertir la columna 'FECHA' a tipo datetime
+    dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
 
-    mostrar_indicador_financiero(
-        "Gasto Personal",
-        "Gasto de Personal / Ingresos = (Gasto de Personal / Ingresos Totales)",
-        "Mide qué porcentaje de los ingresos totales se destina a gastos de personal. Un valor más bajo indica una mayor eficiencia en la gestión de los costos de personal.",
-        f"Gasto Personal: {df_filtered['Gasto de Personal'].iloc[-1] / df_filtered['Ingresos Totales'].iloc[-1]:.2%}",
-        df_filtered['Periodo'],
-        df_filtered['Gasto de Personal'] / df_filtered['Ingresos Totales'],
-        customdata=[[gasto, ingresos] for gasto, ingresos in zip(df_filtered['Gasto de Personal'], df_filtered['Ingresos Totales'])],
-        color='green',
-        tipo_grafico='bar'
-    )
-elif selected_functionality == "Calidad de Cartera":
-    st.subheader("Fórmulas de Calidad de Cartera")
+    # Crear una nueva columna para el año
+    dfROA['AÑO'] = dfROA['FECHA'].dt.year
 
-    mostrar_indicador_financiero(
-        "Morosidad de Cartera Total",
-        "Tasa de Morosidad = (Préstamos Morosos / Préstamos Totales)",
-        "Mide el porcentaje de la cartera de préstamos que está en mora. Una tasa más baja indica una mejor calidad de la cartera de créditos.",
-        f"Tasa de Morosidad: {df_filtered['Préstamos Morosos'].iloc[-1] / df_filtered['Préstamos Totales'].iloc[-1]:.2%}",
-        df_filtered['Periodo'],
-        df_filtered['Préstamos Morosos'] / df_filtered['Préstamos Totales'],
-        customdata=[[morosos, totales] for morosos, totales in zip(df_filtered['Préstamos Morosos'], df_filtered['Préstamos Totales'])],
-        color='orange',
-        tipo_grafico='dotplot'
-    )
-    # Continuar con más fórmulas de calidad de cartera si es necesario
-elif selected_functionality == "Otros Indicadores":
-    st.subheader("Otras Fórmulas")
+    # Calcular Gasto Operativo por trimestre
+    dfROA['GASTO_OPERATIVO'] = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION'].groupby('AÑO')['SALDO'].pct_change(4) * 100
 
-    mostrar_indicador_financiero(
-        "Crecimiento de Cartera",
-        "Crecimiento de Cartera = ((Cartera Actual - Cartera Anterior) / Cartera Anterior) * 100",
-        "Mide el porcentaje de crecimiento de la cartera de préstamos de un período a otro. Un crecimiento positivo indica expansión.",
-        f"Crecimiento de Cartera: {((df_filtered['Cartera Actual'].iloc[-1] - df_filtered['Cartera Anterior'].iloc[-1]) / df_filtered['Cartera Anterior'].iloc[-1]) * 100:.2f}%",
-        df_filtered['Periodo'],
-        ((df_filtered['Cartera Actual'] - df_filtered['Cartera Anterior']) / df_filtered['Cartera Anterior']) * 100,
-        customdata=[[actual, anterior] for actual, anterior in zip(df_filtered['Cartera Actual'], df_filtered['Cartera Anterior'])],
-        color='purple'
-    )
+    # Crear un gráfico interactivo con una línea por cada año para Gasto Operativo
+    fig_gasto_operativo = make_subplots(rows=1, cols=1, shared_xaxes=True)
 
-    mostrar_indicador_financiero(
-        "Productividad por Empleado",
-        "Productividad por Empleado = Ingresos Totales / Número de Empleados",
-        "Muestra cuánto ingreso genera cada empleado. Mayor productividad por empleado es indicativa de una fuerza laboral más eficiente.",
-        f"Productividad por Empleado: {df_filtered['Ingresos Totales'].iloc[-1] / df_filtered['Número de Empleados'].iloc[-1]:,.2f}",
-        df_filtered['Periodo'],
-        df_filtered['Ingresos Totales'] / df_filtered['Número de Empleados'],
-        customdata=[[ingresos, empleados] for ingresos, empleados in zip(df_filtered['Ingresos Totales'], df_filtered['Número de Empleados'])],
-        color='brown'
-    )
+    # Filtrar solo los datos que tienen Gasto Operativo (descartando NaN)
+    df_filtered_gasto_operativo = dfROA.dropna(subset=['GASTO_OPERATIVO'])
 
-    # Agregamos la nueva fórmula como gráfico de líneas
-    mostrar_indicador_financiero(
-        "Crecimiento de Depósitos",
-        "Crecimiento de Depósitos = ((Depósitos Actuales - Depósitos Anteriores) / Depósitos Anteriores) * 100",
-        "Mide el porcentaje de cambio en el total de depósitos de un período a otro, indicando la capacidad de la cooperativa para atraer y retener depósitos.",
-        f"Crecimiento de Depósitos: {((df_filtered['Depósitos Actuales'].iloc[-1] - df_filtered['Depósitos Anteriores'].iloc[-1]) / df_filtered['Depósitos Anteriores'].iloc[-1]) * 100:.2f}%",
-        df_filtered['Periodo'],
-        ((df_filtered['Depósitos Actuales'] - df_filtered['Depósitos Anteriores']) / df_filtered['Depósitos Anteriores']) * 100,
-        customdata=[[actuales, anteriores] for actuales, anteriores in zip(df['Depósitos Actuales'], df_filtered['Depósitos Anteriores'])],
-        color='pink',
-        tipo_grafico='lines+markers'
-    )
+    for year in df_filtered_gasto_operativo['AÑO'].unique():
+        data_year = df_filtered_gasto_operativo[df_filtered_gasto_operativo['AÑO'] == year]
+        fig_gasto_operativo.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['GASTO_OPERATIVO'], mode='lines+markers', name=f'Gasto Operativo - {year}'))
 
-    # Agregamos otra nueva fórmula como gráfico de barras
-    mostrar_indicador_financiero(
-        "Liquidez",
-        "Liquidez = Activos Líquidos / Pasivos de Corto Plazo",
-        "Evalúa la capacidad de la cooperativa para cubrir sus obligaciones a corto plazo con activos líquidos. Una mayor liquidez es un signo de solidez financiera.",
-        f"Liquidez: {df_filtered['Activos Líquidos'].iloc[-1] / df_filtered['Pasivos de Corto Plazo'].iloc[-1]:.2f}",
-        df_filtered['Periodo'],
-        df_filtered['Activos Líquidos'] / df_filtered['Pasivos de Corto Plazo'],
-        customdata=[[liquidez, pasivos] for liquidez, pasivos in zip(df_filtered['Activos Líquidos'], df_filtered['Pasivos de Corto Plazo'])],
-        color='gray',
-        tipo_grafico='bar'
-    )
+    # Actualizar diseño del gráfico Gasto Operativo
+    fig_gasto_operativo.update_layout(title='Gasto Operativo por Trimestre',
+                                     xaxis_title='Fecha',
+                                     yaxis_title='Gasto Operativo')
+    st.subheader("Gráfico de Gasto Operativo por Trimestre")
+    st.plotly_chart(fig_gasto_operativo)
+    gastos_operativos = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION']
+    fig = px.bar(gastos_operativos, x='FECHA', y='SALDO', color='GRUPO',
+                labels={'SALDO': 'Gasto Operativo', 'GRUPO': 'Categoría'},
+                title='Desglose del Gasto Operativo por Categoría a lo largo del tiempo')
+    fig.update_xaxes(title_text='Fecha')
+    fig.update_yaxes(title_text='Gasto Operativo')
+    st.subheader("Gráfico de barras de Gasto Operativo")
+    st.plotly_chart(fig)
 
-    # Agregamos otra nueva fórmula como gráfico de puntos con barras de error
+    gastos_operativos = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION'].groupby('FECHA')['SALDO'].sum()
+
+    fig = px.line(gastos_operativos, x=gastos_operativos.index, y='SALDO', title='Gasto Operativo a lo largo del tiempo')
+    fig.update_xaxes(title_text='Fecha')
+    fig.update_yaxes(title_text='Gasto Operativo')
+    st.subheader("Gráfico de Gasto Operativo a lo largo del tiempo")
+    st.plotly_chart(fig)
+
+elif selected_formula == "Solvencia Patrimonial":
     mostrar_indicador_financiero(
-        "Solvencia",
+        "Solvencia Patrimonial",
         "Solvencia = Patrimonio / Activos Totales",
-        "Mide la proporción del patrimonio en relación con los activos totales, indicando el nivel de seguridad financiera y la capacidad para absorber pérdidas.",
-        f"Solvencia: {df_filtered['Patrimonio'].iloc[-1] / df_filtered['Ingresos Totales'].iloc[-1]:.2%}",
-        df_filtered['Periodo'],
-        df_filtered['Patrimonio'] / df_filtered['Ingresos Totales'],
-        customdata=[[patrimonio, activos] for patrimonio, activos in zip(df_filtered['Patrimonio'], df_filtered['Ingresos Totales'])],
-        color='cyan',
-        tipo_grafico='bar_with_error'
+        "Mide la proporción del patrimonio en relación con los activos totales, indicando el nivel de seguridad financiera y la capacidad para absorber pérdidas."
     )
+
+    # Convertir la columna 'SALDO' a tipo numérico
+    dfROA['SALDO'] = pd.to_numeric(dfROA['SALDO'].replace('[\$,]', '', regex=True), errors='coerce')
+
+    # Convertir la columna 'FECHA' a tipo datetime
+    dfROA['FECHA'] = pd.to_datetime(dfROA['FECHA'], format='%m/%d/%Y')
+
+    # Crear una nueva columna para el año
+    dfROA['AÑO'] = dfROA['FECHA'].dt.year
+
+    # Calcular Solvencia Patrimonial
+    df_solvencia = dfROA.pivot(index='FECHA', columns='NombreCuenta', values='SALDO').reset_index()
+    df_solvencia['SOLVENCIA_PATRIMONIAL'] = df_solvencia['PATRIMONIO'] / df_solvencia['ACTIVO'] * 100
+
+    # Crear un gráfico interactivo
+    fig_solvencia = make_subplots(rows=1, cols=1, shared_xaxes=True)
+
+    # Añadir la línea de Solvencia Patrimonial al gráfico
+    fig_solvencia.add_trace(go.Scatter(x=df_solvencia['FECHA'], y=df_solvencia['SOLVENCIA_PATRIMONIAL'], mode='lines+markers', name='Solvencia Patrimonial'))
+
+    # Actualizar diseño del gráfico
+    fig_solvencia.update_layout(title='Solvencia Patrimonial',
+                                xaxis_title='Fecha',
+                                yaxis_title='Solvencia Patrimonial (%)')
+
+    # Mostrar el gráfico
+    st.subheader("Gráfico de Solvencia Patrimonial")
+    st.plotly_chart(fig_solvencia)
+    solvencia = dfROA[dfROA['TIPO'].isin([1, 3])] 
+    solvencia['SOLVENCIA_PATRIMONIAL'] = solvencia.groupby(['FECHA', 'NombreCuenta'])['SALDO'].transform('sum')
+    fig_solvencia = px.line(solvencia, x='FECHA', y='SOLVENCIA_PATRIMONIAL', color='NombreCuenta',
+                            labels={'SOLVENCIA_PATRIMONIAL': 'Solvencia Patrimonial', 'NombreCuenta': 'Cuenta'},
+                            title='Solvencia Patrimonial a lo largo del tiempo')
+    fig_solvencia.update_xaxes(title_text='Fecha')
+    fig_solvencia.update_yaxes(title_text='Monto')
+    st.subheader("Gráfico comparativa de activo y patrimonio de Solvencia Patrimonial")
+    st.plotly_chart(fig_solvencia)
