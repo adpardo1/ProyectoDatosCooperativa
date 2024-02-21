@@ -4,6 +4,15 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+
+dfROA = pd.read_csv("formulascsvFINAL1.csv")
+
+st.sidebar.image("https://th.bing.com/th/id/R.f0a68a9aec5f8116cb07438f2940e77e?rik=Rxot3C3ezKqjEg&pid=ImgRaw&r=0")
+st.markdown("""
+    ## VISUALIZADOR DE INDICADORES FINANCIEROS 
+    
+    #### El objetivo de este visualizador es facilitar la interpretación y análisis de indicadores financieros, permitiendo a los usuarios interactuar con las graficas.
+    """)
 def mostrar_indicador_financiero(titulo, formula, descripcion):
     st.header(titulo)
 
@@ -15,22 +24,30 @@ def mostrar_indicador_financiero(titulo, formula, descripcion):
     col2.subheader("Descripción:")
     col2.write(descripcion)
 
-# Leer los datos
-dfROA = pd.read_csv("formulascsvFINAL1.csv")
-
 # Menú desplegable para agrupar las fórmulas
-selected_group = st.sidebar.selectbox("Selecciona un grupo", ["Formulas 1", "Formulas 2"])
+selected_group = st.sidebar.selectbox("Selecciona categoría", ["Indicadores financieros", "Indicadores de prueba"])
 
-# Mostrar el menú de selección de fórmulas solo cuando se selecciona el grupo "Formulas 1"
-if selected_group == "Formulas 1":
+# Mostrar el menú de selección de fórmulas solo cuando se selecciona el grupo "Indicadores financieros"
+if selected_group == "Indicadores financieros":
     # Menú de selección entre las fórmulas
     selected_formula = st.sidebar.selectbox("Selecciona una fórmula", [
-        "ROA por Trimestre",
-        "Gasto Operativo por Trimestre",
+        "ROA",
+        "Gasto Operativo",
         "Solvencia Patrimonial"
     ])
+    st.sidebar.markdown("""
+    ---
+
+    ### Autores
+    - David Pardo
+    - Jose Criollo
+    - Rosa Palacios
+    - Carlos Sarmiento
+
+    @utpl
+    """)
 # Mostrar la fórmula seleccionada
-    if selected_formula == "ROA por Trimestre":
+    if selected_formula == "ROA":
         mostrar_indicador_financiero(
             "Rentabilidad sobre el activo (ROA)",
             "ROA = Utilidad Neta / Activos Totales Promedio",
@@ -43,14 +60,17 @@ if selected_group == "Formulas 1":
         dfROA['AÑO'] = dfROA['FECHA'].dt.year
         dfROA['ROA'] = dfROA.groupby('AÑO')['SALDO'].pct_change(4) * 100
 
+        # Crear un gráfico interactivo con una línea por cada año para ROA
         fig_roa = make_subplots(rows=1, cols=1, shared_xaxes=True)
 
+        # Filtrar solo los datos que tienen ROA (descartando NaN)
         df_filtered_roa = dfROA.dropna(subset=['ROA'])
 
         for year in df_filtered_roa['AÑO'].unique():
             data_year = df_filtered_roa[df_filtered_roa['AÑO'] == year]
             fig_roa.add_trace(go.Scatter(x=data_year['FECHA'], y=data_year['ROA'], mode='lines+markers', name=f'ROA - {year}'))
 
+        # Actualizar diseño del gráfico ROA
         fig_roa.update_layout(title='ROA por Trimestre',
                             xaxis_title='Fecha',
                             yaxis_title='ROA')
@@ -58,38 +78,33 @@ if selected_group == "Formulas 1":
         st.subheader("Gráfico de ROA por Trimestre")
         st.plotly_chart(fig_roa)
 
-        dfROA['AÑO'] = dfROA['FECHA'].dt.year
+        # Filtrar los datos para cada año
+        df_2021 = dfROA[dfROA['FECHA'].dt.year == 2021]
+        df_2022 = dfROA[dfROA['FECHA'].dt.year == 2022]
+        df_2023 = dfROA[dfROA['FECHA'].dt.year == 2023]
 
-        # Calcular ROA por trimestre
-        dfROA['ROA'] = dfROA.groupby('AÑO')['SALDO'].pct_change(4) * 100
+        # Calcular el ROA para cada año
+        roa_2021 = (df_2021[df_2021['TIPO'] == 5].groupby('FECHA')['SALDO'].sum() - df_2021[df_2021['TIPO'] == 4].groupby('FECHA')['SALDO'].sum()) / df_2021[df_2021['TIPO'] == 1].groupby('FECHA')['SALDO'].mean() * 100
+        roa_2022 = (df_2022[df_2022['TIPO'] == 5].groupby('FECHA')['SALDO'].sum() - df_2022[df_2022['TIPO'] == 4].groupby('FECHA')['SALDO'].sum()) / df_2022[df_2022['TIPO'] == 1].groupby('FECHA')['SALDO'].mean() * 100
+        roa_2023 = (df_2023[df_2023['TIPO'] == 5].groupby('FECHA')['SALDO'].sum() - df_2023[df_2023['TIPO'] == 4].groupby('FECHA')['SALDO'].sum()) / df_2023[df_2023['TIPO'] == 1].groupby('FECHA')['SALDO'].mean() * 100
 
-        # Filtrar solo los datos que tienen ROA (descartando NaN)
-        df_filtered = dfROA.dropna(subset=['ROA'])
+        # Combinar los resultados en un solo DataFrame
+        df_combined = pd.DataFrame({'2021': roa_2021, '2022': roa_2022, '2023': roa_2023})
 
-        # Crear gráfico interactivo de dispersión animado para ROA por trimestre y año
-        fig_animated_scatter_roa = px.scatter(df_filtered, x='FECHA', y='ROA', animation_frame='AÑO',
-                                            labels={'ROA': 'ROA (%)', 'FECHA': 'Fecha'},
-                                            title='Variación del ROA por Trimestre y Año',
-                                            range_x=[dfROA['FECHA'].min(), dfROA['FECHA'].max()],
-                                            range_y=[df_filtered['ROA'].min(), df_filtered['ROA'].max()])
-        st.subheader("Gráfico de la evolucion de ROA")
-        st.plotly_chart(fig_animated_scatter_roa)
+        # Resetear el índice para evitar problemas
+        df_combined = df_combined.reset_index()
 
-        ingresos = dfROA[dfROA['TIPO'] == 5].groupby('FECHA')['SALDO'].sum()
-        gastos = dfROA[dfROA['TIPO'] == 4].groupby('FECHA')['SALDO'].sum()
-        roa = (ingresos - gastos) / dfROA[dfROA['TIPO'] == 1].groupby('FECHA')['SALDO'].mean() * 100
-
-        fig = px.line(roa, x=roa.index, y='SALDO', title='ROA a lo largo del tiempo')
-        fig.update_xaxes(title_text='Fecha')
+        # Crear el gráfico con las líneas superpuestas
+        fig = px.line(df_combined, x='FECHA', y=['2021', '2022', '2023'], title='ROA over Time', labels={'value': 'ROA (%)'})
+        fig.update_xaxes(title_text='Date')
         fig.update_yaxes(title_text='ROA (%)')
 
-        st.subheader("Gráfico de ROA a lo largo del tiempo")
+        st.subheader("ROA a lo largo del tiempo")
         st.plotly_chart(fig)
-
-    elif selected_formula == "Gasto Operativo por Trimestre":
+    elif selected_formula == "Gasto Operativo":
         mostrar_indicador_financiero(
             "Eficiencia en Gasto Operativo",
-            "Eficiencia en Gasto Operativo = (Ingresos Totales - Gasto Operativo) / Ingresos Totales",
+            "Eficiencia en Gasto Operativo = (Ingresos - Gastos Operativos) / Ingresos",
             "Evalúa qué tan eficientemente una empresa está administrando sus gastos operativos en relación con sus ingresos. Un valor más alto indica mayor eficiencia."
         )
 
@@ -121,22 +136,17 @@ if selected_group == "Formulas 1":
                                         yaxis_title='Gasto Operativo')
         st.subheader("Gráfico de Gasto Operativo por Trimestre")
         st.plotly_chart(fig_gasto_operativo)
-        gastos_operativos = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION']
-        fig = px.bar(gastos_operativos, x='FECHA', y='SALDO', color='GRUPO',
-                    labels={'SALDO': 'Gasto Operativo', 'GRUPO': 'Categoría'},
-                    title='Desglose del Gasto Operativo por Categoría a lo largo del tiempo')
-        fig.update_xaxes(title_text='Fecha')
-        fig.update_yaxes(title_text='Gasto Operativo')
+
+        gastos_operativos_categoria = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION']
+        fig_gastos_operativos_categoria = px.bar(gastos_operativos_categoria, x='FECHA', y='SALDO',
+                                                labels={'SALDO': 'Gasto Operativo'},
+                                                title='Desglose del Gasto Operativo a lo largo del tiempo')
+        fig_gastos_operativos_categoria.update_xaxes(title_text='Fecha')
+        fig_gastos_operativos_categoria.update_yaxes(title_text='Gasto Operativo')
+
+        # Mostrar el gráfico
         st.subheader("Gráfico de barras de Gasto Operativo")
-        st.plotly_chart(fig)
-
-        gastos_operativos = dfROA[dfROA['NombreCuenta'] == 'GASTOS DE OPERACION'].groupby('FECHA')['SALDO'].sum()
-
-        fig = px.line(gastos_operativos, x=gastos_operativos.index, y='SALDO', title='Gasto Operativo a lo largo del tiempo')
-        fig.update_xaxes(title_text='Fecha')
-        fig.update_yaxes(title_text='Gasto Operativo')
-        st.subheader("Gráfico de Gasto Operativo a lo largo del tiempo")
-        st.plotly_chart(fig)
+        st.plotly_chart(fig_gastos_operativos_categoria)
 
     elif selected_formula == "Solvencia Patrimonial":
         mostrar_indicador_financiero(
@@ -181,19 +191,19 @@ if selected_group == "Formulas 1":
         fig_solvencia.update_yaxes(title_text='Monto')
         st.subheader("Gráfico comparativa de activo y patrimonio de Solvencia Patrimonial")
         st.plotly_chart(fig_solvencia)
-elif selected_group == "Formulas 2":
-    st.header("Fórmulas de prueba para el grupo Formulas 2")
+elif selected_group == "Indicadores de prueba":
+    st.header("Fórmulas de prueba para el grupo Indicadores de prueba")
 
-    # Menú de selección para el grupo "Formulas 2"
+    # Menú de selección para el grupo "Indicadores de prueba"
     selected_formula_group2 = st.sidebar.selectbox("Selecciona una fórmula", [
         "Fórmula de Prueba 1",
         "Fórmula de Prueba 2"
     ])
 
-    # Mostrar la fórmula seleccionada para el grupo "Formulas 2"
+    # Mostrar la fórmula seleccionada para el grupo "Indicadores de prueba"
     if selected_formula_group2 == "Fórmula de Prueba 1":
         st.subheader("Fórmula de Prueba 1")
-        st.write("Esta es una fórmula de prueba para el grupo Formulas 2.")
+        st.write("Esta es una fórmula de prueba para el grupo Indicadores de prueba.")
 
         # Gráfico de prueba
         data = {'X': np.arange(10), 'Y': np.random.rand(10)}
@@ -203,10 +213,11 @@ elif selected_group == "Formulas 2":
 
     elif selected_formula_group2 == "Fórmula de Prueba 2":
         st.subheader("Fórmula de Prueba 2")
-        st.write("Otra fórmula de prueba para el grupo Formulas 2.")
+        st.write("Otra fórmula de prueba para el grupo Indicadores de prueba.")
 
         # Otro gráfico de prueba
         data = {'X': np.arange(10), 'Y': np.random.rand(10)}
         df_test = pd.DataFrame(data)
         fig_test = px.line(df_test, x='X', y='Y', title='Gráfico de prueba para Fórmula de Prueba 2')
         st.plotly_chart(fig_test)
+
